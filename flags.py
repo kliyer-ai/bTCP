@@ -1,7 +1,7 @@
 from enum import IntEnum
 from struct import pack
 
-class Flags:
+class Flags():
 
     def __init__(self, flags):
         self.flags = flags

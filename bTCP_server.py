@@ -1,6 +1,10 @@
 #!/usr/local/bin/python3
 import socket, argparse
-from struct import *
+from message import Message
+from connection import Connection
+from queue import Queue
+import socketWrapper
+from connection_handler import Connection_Handler
 
 #Handle arguments
 parser = argparse.ArgumentParser()
@@ -12,12 +16,8 @@ args = parser.parse_args()
 server_ip = "127.0.0.1"
 server_port = 9001
 
-#Define a header format
-header_format = "I"
 
-sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM) # UDP
-sock.bind((server_ip, server_port))
+sock = socketWrapper.perfectSocket(("localhost",9001)) # UDP
 
-while True:
-    data, addr = sock.recvfrom(1016)
-    print(unpack(header_format,data))
+ch = Connection_Handler(sock, "s")
+ch.serve()

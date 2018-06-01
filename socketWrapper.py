@@ -1,6 +1,7 @@
 import socket
 import abc
 import random
+import select
 
 #socket wrapper - simulate different network
 class SocketWrapper:
@@ -70,8 +71,15 @@ class perfectSocket(SocketWrapper):
 
     def sendto(self,data, addr):
         self.s.sendto(data,addr)
+
     def recv(self):
-        return self.s.recvfrom(1016)
+        r, _, _ = select.select([self.s], [], [], 0.1) #timeout in s
+        if r:
+            s = r[0]
+            return s.recvfrom(1016)
+        else:
+            return None
+
 
 class lossySocket(perfectSocket):
     def __init__(self, address, interferers:Interferer):

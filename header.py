@@ -23,4 +23,5 @@ class Header:
         header = unpack(Header.header_format, data)
         return cls(header[0], header[1], header[2], Flags.from_byte(header[3]), header[4], header[5], header[6])
 
-    
+    def flagSet(self, flag):
+        return flag in self.flags

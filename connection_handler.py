@@ -4,7 +4,7 @@ from connection import Connection
 from threading import Lock
 
 
-class Connection_Handler():
+class ConnectionHandler():
 
     def __init__(self, sock, mode):
         self.connections = {}
@@ -12,9 +12,10 @@ class Connection_Handler():
         self.sock = sock
         self.mode = mode
         self.lock = Lock()
+        self.done = False
     
     def serve(self):
-        while True:
+        while not self.done:
             response = self.sock.recv()
             if response:
                 data, addr = response
@@ -24,7 +25,9 @@ class Connection_Handler():
                 if streamID in self.connections:
                     self.connections[streamID].receive(message)
                 else:
-                    self.connections[streamID] = Connection(addr, "s", self, streamID)
+                    c = Connection(addr, "s", self, streamID)
+                    self.connections[streamID] = c
+                    c.start()
                 
             else:
                 while not self.toSend.empty():
@@ -33,3 +36,7 @@ class Connection_Handler():
     def close_connection(self, streamID):
         with self.lock:
             del self.connections[streamID]
+
+    def stop(self):
+        self.done = True
+        self.sock.close()

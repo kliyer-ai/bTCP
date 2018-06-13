@@ -4,7 +4,7 @@ from message import Message
 from connection import Connection
 from queue import Queue
 import socketWrapper
-from connection_handler import Connection_Handler
+from connection_handler import ConnectionHandler
 
 #Handle arguments
 parser = argparse.ArgumentParser()
@@ -19,5 +19,5 @@ server_port = 9001
 
 sock = socketWrapper.perfectSocket(("localhost",9001)) # UDP
 
-ch = Connection_Handler(sock, "s")
+ch = ConnectionHandler(sock, "s")
 ch.serve()

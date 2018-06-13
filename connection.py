@@ -1,6 +1,7 @@
 from message import Message
 from threading import Thread
 from queue import Queue
+import state
 
 class Connection(Thread):
 
@@ -14,16 +15,23 @@ class Connection(Thread):
         self.timeouts = {}
         self.streamID = streamID
 
+        self.data = bytes()
+        self.seq = 0
+        self.ack = 0
+
         if mode == "s":
-            self.state = "listen"
+            self.state = state.Listen
         else:
-            self.state = "send"
+            self.state = state.Syn_Sent
+
+        
 
 
     def run(self):
         while not self.done:
             message = self.buffer.get()
             self.state = self.state.changeState(self, message)
+            
         self.handler.close_connection(self.streamID)
 
 

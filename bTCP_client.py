@@ -4,7 +4,7 @@ from struct import pack
 from random import randint
 from connection_handler import ConnectionHandler
 from fileReader import FileReader
-from connection import Connection
+from client_connection import ClientConnection
 
 #Handle arguments
 parser = argparse.ArgumentParser()
@@ -23,14 +23,13 @@ sock.bind((server_ip, server_port))
 ch = ConnectionHandler(sock, args.window, args.timeout)
 
 # get file to send
-fr = FileReader()
-fr.read(input("Enter file name: "))
+fileName = input("Enter file name: ")
 
 # create connection
 streamID = 1111
-c = Connection(("127.0.0.1", 9001), 'c', ch, streamID, args.window, args.timeout)
-c.toSend = fr
+c = ClientConnection(("127.0.0.1", 9001), ch, streamID, args.window, args.timeout, fileName)
 
+# add connection 
 ch.addConnection(c)
 
 

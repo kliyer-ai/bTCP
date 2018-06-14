@@ -17,7 +17,12 @@ server_ip = "127.0.0.1"
 server_port = 9001
 
 
-sock = socketWrapper.perfectSocket(("localhost",9001)) # UDP
+sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM) #socketWrapper.perfectSocket(("localhost",9001)) # UDP
+sock.bind((server_ip, server_port))
 
-ch = ConnectionHandler(sock, "s")
-ch.serve()
+ch = ConnectionHandler(sock, args.window, args.timeout)
+
+try:
+    ch.serve()
+except KeyboardInterrupt:
+    ch.stop()

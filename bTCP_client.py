@@ -2,6 +2,9 @@
 import socket, argparse, random
 from struct import pack
 from random import randint
+from connection_handler import ConnectionHandler
+from fileReader import FileReader
+from connection import Connection
 
 #Handle arguments
 parser = argparse.ArgumentParser()
@@ -10,17 +13,32 @@ parser.add_argument("-t", "--timeout", help="Define bTCP timeout in milliseconds
 parser.add_argument("-i","--input", help="File to send", default="tmp.file")
 args = parser.parse_args()
 
-destination_ip = "127.0.0.1"
-destination_port = 9001
-
-#bTCP header
+server_ip = "127.0.0.1"
+server_port = 9002
 
 
-bTCP_payload = ""
-udp_payload = bTCP_header
+sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM) #socketWrapper.perfectSocket(("localhost",9001)) # UDP
+sock.bind((server_ip, server_port))
 
-#UDP socket which will transport your bTCP packets
-sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+ch = ConnectionHandler(sock, args.window, args.timeout)
 
-#send payload
-sock.sendto(udp_payload, (destination_ip, destination_port))
+# get file to send
+fr = FileReader()
+fr.read(input("Enter file name: "))
+
+# create connection
+streamID = 1111
+c = Connection((server_ip, server_port), 'c', ch, streamID, args.window, args.timeout)
+c.toSend = fr
+
+ch.addConnection(c)
+
+
+
+
+
+try:
+    ch.serve()
+    
+except KeyboardInterrupt:
+    ch.stop()

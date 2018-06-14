@@ -20,6 +20,9 @@ class Flags():
                 flags.append(f)
         return cls(flags)
 
+    def isSet(self, flag):
+        return flag in self.flags
+
 
 class Flag(IntEnum):
     C = 128 

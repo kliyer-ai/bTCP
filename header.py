@@ -5,7 +5,7 @@ class Header:
 
     header_format = ">IHHBBHI"
 
-    def __init__(self, streamID, sNum, aNum, flags, window, dataLength = 0, checksum = 0):
+    def __init__(self, streamID, sNum, aNum, flags:Flags, window, dataLength = 0, checksum = 0):
         self.streamID = streamID
         self.sNum = sNum
         self.aNum = aNum
@@ -24,4 +24,4 @@ class Header:
         return cls(header[0], header[1], header[2], Flags.from_byte(header[3]), header[4], header[5], header[6])
 
     def flagSet(self, flag):
-        return flag in self.flags
+        return self.flags.isSet(flag)

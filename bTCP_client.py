@@ -28,7 +28,7 @@ fr.read(input("Enter file name: "))
 
 # create connection
 streamID = 1111
-c = Connection((server_ip, server_port), 'c', ch, streamID, args.window, args.timeout)
+c = Connection(("127.0.0.1", 9001), 'c', ch, streamID, args.window, args.timeout)
 c.toSend = fr
 
 ch.addConnection(c)

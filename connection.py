@@ -126,6 +126,7 @@ class Connection(Thread):
             h = Header(self.streamID, self.sNum, self.aNum, Flags([Flag.A]), self.window)
             self.send(Message(h), True)
         return False
+
     def wrtData(self, suffix):
         with open("rec" + suffix+".jpg", 'wb') as f:
             f.write(self.received)

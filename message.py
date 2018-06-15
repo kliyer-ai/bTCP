@@ -17,7 +17,8 @@ class Message():
         padded_payload = bytearray(1000)
         padded_payload[0:dataLength] = self.payload
         padded_payload = bytes(padded_payload)
-
+        
+        self.header.checksum = 0
         # concetinate header and payload
         binary_message = self.header.to_bytes() + padded_payload
 

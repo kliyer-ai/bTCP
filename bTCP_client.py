@@ -8,8 +8,8 @@ from client_connection import ClientConnection
 
 #Handle arguments
 parser = argparse.ArgumentParser()
-parser.add_argument("-w", "--window", help="Define bTCP window size", type=int, default=100)
-parser.add_argument("-t", "--timeout", help="Define bTCP timeout in milliseconds", type=int, default=100)
+parser.add_argument("-w", "--window", help="Define bTCP window size", type=int, default=8)
+parser.add_argument("-t", "--timeout", help="Define bTCP timeout in milliseconds", type=int, default=5)
 parser.add_argument("-i","--input", help="File to send", default="tmp.file")
 args = parser.parse_args()
 
@@ -23,7 +23,7 @@ sock.bind((server_ip, server_port))
 ch = ConnectionHandler(sock, args.window, args.timeout)
 
 # get file to send
-fileName = input("Enter file name: ")
+fileName = "text.txt"# input("Enter file name: ")
 
 # create connection
 streamID = 1111
@@ -41,3 +41,4 @@ try:
     
 except KeyboardInterrupt:
     ch.stop()
+

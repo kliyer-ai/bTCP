@@ -1,6 +1,7 @@
 from header import Header
 from message import Message
 from flags import Flag, Flags
+from connection import Connection
 
 class State:
     @staticmethod
@@ -10,43 +11,53 @@ class State:
 
 class Established(State):
     @staticmethod
-    def changeState(c, message):
+    def changeState(c: Connection, message: Message):
         header = message.header
 
         if  header.flagSet(Flag.A):
 
+            if header.sNum == c.aNum:
+                c.received += message.payload[:header.dataLength]
+                c.aNum = message.header.sNum + message.header.dataLength
+
             if header.dataLength == 0:
-                if(c.lastAck == header.aNum):
+                if(c.lastReceivedAck == header.aNum):
                     c.duplicateAck += 1
                 else:
-                    c.lastAck = header.aNum
+                    c.lastReceivedAck = header.aNum
                     c.duplicateAck = 0
                 
                 if c.duplicateAck > 2:
-                    pass
+                    c.resendInFlight()
+                    return Established
+                else:
+                    if c.toSend is not None and not c.toSend.empty():
+                        c.sendData()
+                    else:
+                        h = Header(c.streamID, c.sNum, c.aNum, Flags([Flag.A]), c.window)
+                        c.send(Message(h))
 
-
-            if c.toSend is not None and not c.toSend.empty():
-                for p in range(c.window - len(c.inFlight)):
-                    payload = c.toSend.next(1000)
             
-            return Close_Wait
+                c.sendData()
+
+
+            
+            return Established
 
         if header.flagSet(Flag.F):
-            pass
+            return Close_Wait
 
 class Syn_Sent(State):
     @staticmethod
     def changeState(c,  message):
         header = message.header
         if  header.flagSet(Flag.S) and  header.flagSet(Flag.A):
-            
             c.aNum = header.aNum
             c.sNum += 1
 
             h = Header(c.streamID, c.sNum, c.aNum, Flags([Flag.A]), c.window)
             c.send(Message(h))
-
+            c.sendData()
             return Established
 
 

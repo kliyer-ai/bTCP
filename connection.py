@@ -1,8 +1,8 @@
 from message import Message
 from header import Header
-from threading import Thread, Timer, Lock
+from threading import Thread, Timer, RLock
 from queue import Queue
-import state
+
 from flags import Flag, Flags
 
 class Connection(Thread):
@@ -14,7 +14,9 @@ class Connection(Thread):
         self.buffer = Queue()
         self.done = False
         self.streamID = streamID
-        self.lock = Lock()
+        self.lock = RLock()
+
+        self.received = bytes()
 
         self.window = window
         self.inFlight = {}
@@ -22,10 +24,12 @@ class Connection(Thread):
 
         self.timeout = timeout
 
+        self.toSend = None
+
         self.sNum = 0
         self.aNum = 0
         self.duplicateAcks = 0
-        self.lastAck = 0
+        self.lastReceivedAck = 0
 
 
 
@@ -39,13 +43,19 @@ class Connection(Thread):
 
 
     def receive(self, message:Message):
+        print("verifying message...")
         if message.verify():
+            print("verified")
             self.ackPackages(message.header.aNum)
 
-            #self.aNum = message.header.sNum + message.header.dataLength
+            print("Payload",message.payload[:message.header.dataLength])
 
+            #self.aNum = message.header.sNum + message.header.dataLength
+            print("past akk")
 
             self.buffer.put(message)
+        else:
+            print("rejected")
 
 
     def send(self, message):
@@ -53,32 +63,67 @@ class Connection(Thread):
 
         with self.lock:
             sNum = message.header.sNum
-            timer = Timer(self.timeout, self.resend, [sNum])
-            self.timers[sNum] = timer
             self.inFlight[sNum] = message
+            self.startTimer(sNum)
+            
 
-            timer.start()
+    def startTimer(self, sNum):
+        timer = Timer(self.timeout, self.timerResend, [sNum])
+        self.stopTimer(sNum)
+        self.timers[sNum] = timer
+        timer.start()
+        print("started timer", timer)
 
 
-    def stopTimers(self, toStop):
+    def stopTimer(self, sNum):
         with self.lock:
-            for k in toStop:
-                timer = self.timers.pop(k)
-                timer.cancel()
+            timer = self.timers.pop(sNum, None)
+            print("stop timer", timer)
+            if timer is not None:
+                timer.cancel()  
 
 
-    def ackPackages(self, threshold):
+    def ackPackages(self, aNum):
         with self.lock:
-            received = [k for k in self.inFlight.keys() if k <= threshold]
-            self.stopTimers(received)
+            received = [k for k in self.inFlight.keys() if k <= aNum]
+            print(self.timers)
             for k in received:
+                self.stopTimer(k)
                 del self.inFlight[k]
+            print("inF:: " + str(self.inFlight))
 
 
-    def resend(self, sNum):
+    def timerResend(self, sNum):
+        print("timersNow:", self.timers)
         with self.lock:
-            self.send(self.inFlight.pop(sNum))
+            self.send(self.inFlight[sNum])
 
+    def resendInFlight(self):
+        for sNum, m in self.inFlight.items():
+            self.stopTimer(sNum)
+            self.send(m)
+
+    def sendData(self):
+         if self.toSend is not None and not self.toSend.empty():
+                print(self.window - len(self.inFlight))
+                for _ in range(self.window - len(self.inFlight)):
+                    if self.toSend.empty():
+                        print("done")
+                        break
+
+                    payload = self.toSend.next(10)                    
+                    h = Header(self.streamID, self.sNum, self.aNum, Flags([Flag.A]), self.window)
+
+                    self.sNum += len(payload)
+                    m = Message(h, payload)
+                    m.to_bytes()
+                    print(m.verify())
+                    self.send(m)
+        else:
+                h = Header(c.streamID, c.sNum, c.aNum, Flags([Flag.A]), c.window)
+                c.send(Message(h))
+                
+import state
     
 
     

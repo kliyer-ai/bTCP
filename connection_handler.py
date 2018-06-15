@@ -1,6 +1,6 @@
 from queue import Queue
 from message import Message
-from connection import Connection
+from server_connection import ServerConnection
 from threading import Lock
 import select
 
@@ -30,7 +30,7 @@ class ConnectionHandler():
                 if streamID in self.connections:
                     self.connections[streamID].receive(message)
                 else:
-                    c = Connection(addr, "s", self, streamID, self.window, self.timeout)
+                    c = ServerConnection(addr, self, streamID, self.window, self.timeout)
                     c.receive(message)
                     self.connections[streamID] = c
                     c.start()

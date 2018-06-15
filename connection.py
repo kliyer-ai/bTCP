@@ -140,7 +140,6 @@ class Connection(Thread):
             self.send(Message(h), True)
         return False
 
-
     def wrtData(self, suffix):
         with open("rec" + suffix + ".jpg", 'wb') as f:
             f.write(self.received)

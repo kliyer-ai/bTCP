@@ -40,7 +40,6 @@ class ConnectionHandler():
                     bMessage, addr = self.toSend.get()
                     self.sock.sendto(bMessage, addr) # this has to be a tuple
 
-
     def close_connection(self, streamID):
         with self.lock:
             del self.connections[streamID]

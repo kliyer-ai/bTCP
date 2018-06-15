@@ -26,10 +26,11 @@ class Connection(Thread):
 
         self.toSend = None
 
-        self.sNum = 0
-        self.aNum = 0
+        self._sNum = 0
+        self._aNum = 0
         self.duplicateAcks = 0
         self.lastReceivedAck = 0
+        self.close = False
 
 
 
@@ -58,13 +59,12 @@ class Connection(Thread):
             print("rejected")
 
 
-    def send(self, message):
+    def send(self, message, pureAck = False):
         self.handler.send(message, self.addr)
-
         with self.lock:
-            sNum = message.header.sNum
-            self.inFlight[sNum] = message
-            self.startTimer(sNum)
+            if not pureAck:
+                self.inFlight[self.sNum] = message
+                self.startTimer(self.sNum)
             
 
     def startTimer(self, sNum):
@@ -104,26 +104,46 @@ class Connection(Thread):
             self.send(m)
 
     def sendData(self, ackIfNone = False):
-         if self.toSend is not None and not self.toSend.empty():
-                print(self.window - len(self.inFlight))
-                for _ in range(self.window - len(self.inFlight)):
-                    if self.toSend.empty():
-                        print("done")
-                        break
-
-                    payload = self.toSend.next(10)                    
-                    h = Header(self.streamID, self.sNum, self.aNum, Flags([Flag.A]), self.window)
-
-                    self.sNum += len(payload)
-                    m = Message(h, payload)
-                    m.to_bytes()
-                    print(m.verify())
+        print("sending!!")
+        if self.toSend is not None and not self.toSend.empty():
+            print(self.window - len(self.inFlight))
+            for _ in range(self.window - len(self.inFlight)):
+                if self.toSend.empty():
+                    print("done")
+                    h = Header(self.streamID, self.sNum, self.aNum, Flags([Flag.F]), self.window)
+                    m = Message(h)
                     self.send(m)
-         elif ackIfNone:
-             h = Header(self.streamID, self.sNum, self.aNum, Flags([Flag.A]), self.window)
-             self.send(Message(h))
+                    self.sNum +=1
+                    return True
+                payload = self.toSend.next(100)
+                h = Header(self.streamID, self.sNum, self.aNum, Flags([Flag.A]), self.window)
+                self.sNum += len(payload)
+                m = Message(h, payload)
+                m.to_bytes()
+                print(m.verify())
+                self.send(m)
+        elif ackIfNone:
+            h = Header(self.streamID, self.sNum, self.aNum, Flags([Flag.A]), self.window)
+            self.send(Message(h), True)
+        return False
+    def wrtData(self, suffix):
+        with open("rec" + suffix+".jpg", 'wb') as f:
+            f.write(self.received)
 
+    @property
+    def sNum(self):
+        return self._sNum % 65536
+    @sNum.setter
+    def sNum(self, num):
+        self._sNum = num%65536
 
+    @property
+    def aNum(self):
+        return self._aNum % 65536
+
+    @aNum.setter
+    def aNum(self, num):
+        self._aNum = num % 65536
 import state
     
 

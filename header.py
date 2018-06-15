@@ -7,8 +7,8 @@ class Header:
 
     def __init__(self, streamID, sNum, aNum, flags:Flags, window, dataLength = 0, checksum = 0):
         self.streamID = streamID
-        self.sNum = sNum
-        self.aNum = aNum
+        self.sNum = sNum % 65536
+        self.aNum = aNum % 65536
         self.flags = flags
         self.window = window
         self.dataLength = dataLength

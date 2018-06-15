@@ -23,24 +23,35 @@ class Established(State):
                     else:
                         c.lastReceivedAck = header.aNum
                         c.duplicateAck = 0
+                        c.aNum = message.header.sNum + message.header.dataLength  # update num
+                        if c.sendData():
+                            return Fin_Wait_1
+
 
                     if c.duplicateAck > 2:
+                        print("Dup Ack")
                         c.resendInFlight()
-                        return Established
-                    elif c.duplicateAck == 0:
-                        c.sendData()
+                        if c.sendData():
+                            return Fin_Wait_1
                 else:
                     #add data
+                    c.lastReceivedAck = header.aNum
                     c.received += message.payload[:header.dataLength]
                     c.aNum = message.header.sNum + message.header.dataLength  # update num
-                    c.sendData(True)
+                    if c.sendData():
+                        return Fin_Wait_1
             else:
                 #duplicate Ack back - package did not fit
+                print("OUT OF SEQ")
                 h = Header(c.streamID, c.sNum, c.aNum, Flags([Flag.A]), c.window)
-                c.send(Message(h))
+                c.send(Message(h), True)
             return Established
 
         if header.flagSet(Flag.F):
+            h = Header(c.streamID, c.sNum, c.aNum, Flags([Flag.F]), c.window)
+            message = Message(h)
+            c.send(message)
+            c.sNum +=1
             return Close_Wait
 
 class Syn_Sent(State):
@@ -52,8 +63,9 @@ class Syn_Sent(State):
             c.sNum += 1
 
             h = Header(c.streamID, c.sNum, c.aNum, Flags([Flag.A]), c.window)
-            c.send(Message(h))
-            c.sendData()
+            c.send(Message(h),True)
+            if c.sendData():
+                return Fin_Wait_1
             return Established
 
 
@@ -73,9 +85,12 @@ class Last_Ack(State):
 
 class Close_Wait(State):
     @staticmethod
-    def changeState(connection,  message):
-        if connection.sendFin():
-            return Last_Ack
+    def changeState(c,  message):
+        if  message.header.flagSet(Flag.A):
+            c.close = True
+            c.wrtData("Server")
+            return Closed
+        return Close_Wait
 
 
 class Closed(State):
@@ -95,29 +110,34 @@ class Listen(State):
     def changeState(c, message):
         header = message.header
         if  header.flagSet(Flag.S):
-
             c.window = header.window
             c.aNum += 1
-
             h = Header(c.streamID, c.sNum, c.aNum, Flags([Flag.A, Flag.S]), c.window)
             message = Message(h)
             c.send(message)
+            c.sNum +=1
             return Syn_Rcvd
 
 #client
 
 class Fin_Wait_1(State):
     @staticmethod
-    def changeState(connection,  message):
-        if  message.flagSet(Flag.A):
-            return Fin_Wait_2
+    def changeState(c,  message):
+        if  message.header.flagSet(Flag.F):
+            c.aNum +=1
+            h = Header(c.streamID, c.sNum, c.aNum, Flags([Flag.A]), c.window)
+            m = Message(h)
+            c.send(m, True)
+            c.close = True
+            c.wrtData("Client")
+            return Closed
+        return Fin_Wait_1
 
-class Fin_Wait_2(State):
+class Closing(State):
     @staticmethod
     def changeState(connection,  message):
-        if  message.flagSet(Flag.F):
-            connection.sendAck()
-            return Time_Wait
+        if  message.flagSet(Flag.A):
+            return Closed
 
 class Time_Wait(State):
     @staticmethod

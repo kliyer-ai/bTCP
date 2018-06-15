@@ -46,6 +46,6 @@ class Message():
         return checksum == binascii.crc32(bHeader + self.payload)
 
     def __str__(self):
-        return "Message" + 
+        return "Message:" + str(self.header.sNum) + " " +  str(self.header.aNum) + "-"+ str(self.header.flags.flags) + "=" +str(self.payload)
 
 

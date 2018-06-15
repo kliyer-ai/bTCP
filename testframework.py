@@ -67,7 +67,7 @@ class TestbTCPFramework(unittest.TestCase):
         sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM) 
         sock.bind((TestbTCPFramework.server_ip, TestbTCPFramework.server_port))
 
-        ch = ConnectionHandler(sock, 8, 1)
+        ch = ConnectionHandler(sock, winsize, timeout/1000.0)
         TestbTCPFramework.server = ch
 
         t = threading.Thread(target=ch.serve)
@@ -81,7 +81,8 @@ class TestbTCPFramework(unittest.TestCase):
         
         # close server
         TestbTCPFramework.server.stop()
-        #TestbTCPFramework.server.sock.close()
+        while not TestbTCPFramework.server.closed:
+            print(".")
 
 
     def test_ideal_network(self):
@@ -92,14 +93,14 @@ class TestbTCPFramework(unittest.TestCase):
         sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM) 
         sock.bind((TestbTCPFramework.client_ip, TestbTCPFramework.client_port))
 
-        ch = ConnectionHandler(sock, 8, 1)
+        ch = ConnectionHandler(sock, winsize, timeout/1000.0)
 
         # get file to send
         fileName = "text.txt"
         
         # create connection
         streamID = random.randint(0, 2^32-1)
-        c = ClientConnection((TestbTCPFramework.server_ip, TestbTCPFramework.server_port), ch, streamID, 8, 1, fileName)
+        c = ClientConnection((TestbTCPFramework.server_ip, TestbTCPFramework.server_port), ch, streamID, winsize, timeout/1000.0, fileName)
         
         # client sends content to server
         ch.addConnection(c)
@@ -110,7 +111,7 @@ class TestbTCPFramework(unittest.TestCase):
         # server receives content from client
         receivedData = TestbTCPFramework.server.getData(streamID)
         sentData = bytes()
-        with open(fileName, 'wb') as f:
+        with open(fileName, 'rb') as f:
             sentData = f.read()
 
         # content received by server matches the content sent by client
@@ -119,56 +120,137 @@ class TestbTCPFramework(unittest.TestCase):
     def test_flipping_network(self):
         """reliability over network with bit flips 
         (which sometimes results in lower layer packet loss)"""
+
         # setup environment
         run_command(netem_change.format("corrupt 1%"))
-        
+
         # launch localhost client connecting to server
-        
+        sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        sock.bind((TestbTCPFramework.client_ip, TestbTCPFramework.client_port))
+
+        ch = ConnectionHandler(sock, winsize, timeout/1000.0)
+
+        # get file to send
+        fileName = "text.txt"
+
+        # create connection
+        streamID = random.randint(0, 2 ^ 32 - 1)
+        c = ClientConnection((TestbTCPFramework.server_ip, TestbTCPFramework.server_port), ch, streamID, winsize, timeout/1000.0, fileName)
+
         # client sends content to server
-        
+        ch.addConnection(c)
+        ch.serve()
+        sock.close()
+        print("whyy")
+
         # server receives content from client
-        
+        receivedData = TestbTCPFramework.server.getData(streamID)
+        sentData = bytes()
+        with open(fileName, 'rb') as f:
+            sentData = f.read()
+
         # content received by server matches the content sent by client
+        return self.assertEqual(sentData, receivedData)
 
     def test_duplicates_network(self):
         """reliability over network with duplicate packets"""
         # setup environment
         run_command(netem_change.format("duplicate 10%"))
-        
+
         # launch localhost client connecting to server
-        
+        sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        sock.bind((TestbTCPFramework.client_ip, TestbTCPFramework.client_port))
+
+        ch = ConnectionHandler(sock, winsize, timeout/1000.0)
+
+        # get file to send
+        fileName = "text.txt"
+
+        # create connection
+        streamID = random.randint(0, 2 ^ 32 - 1)
+        c = ClientConnection((TestbTCPFramework.server_ip, TestbTCPFramework.server_port), ch, streamID, winsize, timeout/1000.0, fileName)
+
         # client sends content to server
-        
+        ch.addConnection(c)
+        ch.serve()
+        sock.close()
+        print("whyy")
+
         # server receives content from client
-        
+        receivedData = TestbTCPFramework.server.getData(streamID)
+        sentData = bytes()
+        with open(fileName, 'rb') as f:
+            sentData = f.read()
+
         # content received by server matches the content sent by client
+        return self.assertEqual(sentData, receivedData)
 
     def test_lossy_network(self):
         """reliability over network with packet loss"""
         # setup environment
         run_command(netem_change.format("loss 10% 25%"))
-        
+
         # launch localhost client connecting to server
-        
+        sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        sock.bind((TestbTCPFramework.client_ip, TestbTCPFramework.client_port))
+
+        ch = ConnectionHandler(sock, winsize, timeout/1000.0)
+
+        # get file to send
+        fileName = "text.txt"
+
+        # create connection
+        streamID = random.randint(0, 2 ^ 32 - 1)
+        c = ClientConnection((TestbTCPFramework.server_ip, TestbTCPFramework.server_port), ch, streamID, winsize, timeout/1000.0, fileName)
+
         # client sends content to server
-        
+        ch.addConnection(c)
+        ch.serve()
+        sock.close()
+        print("whyy")
+
         # server receives content from client
-        
+        receivedData = TestbTCPFramework.server.getData(streamID)
+        sentData = bytes()
+        with open(fileName, 'rb') as f:
+            sentData = f.read()
+
         # content received by server matches the content sent by client
+        return self.assertEqual(sentData, receivedData)
 
 
     def test_reordering_network(self):
         """reliability over network with packet reordering"""
         # setup environment
         run_command(netem_change.format("delay 20ms reorder 25% 50%"))
-        
+
         # launch localhost client connecting to server
-        
+        sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        sock.bind((TestbTCPFramework.client_ip, TestbTCPFramework.client_port))
+
+        ch = ConnectionHandler(sock, winsize, timeout/1000.0)
+
+        # get file to send
+        fileName = "text.txt"
+
+        # create connection
+        streamID = random.randint(0, 2 ^ 32 - 1)
+        c = ClientConnection((TestbTCPFramework.server_ip, TestbTCPFramework.server_port), ch, streamID, winsize, timeout/1000.0, fileName)
+
         # client sends content to server
-        
+        ch.addConnection(c)
+        ch.serve()
+        sock.close()
+        print("whyy")
+
         # server receives content from client
-        
+        receivedData = TestbTCPFramework.server.getData(streamID)
+        sentData = bytes()
+        with open(fileName, 'rb') as f:
+            sentData = f.read()
+
         # content received by server matches the content sent by client
+        return self.assertEqual(sentData, receivedData)
         
     def test_delayed_network(self):
         """reliability over network with delay relative to the timeout value"""
@@ -176,12 +258,32 @@ class TestbTCPFramework(unittest.TestCase):
         run_command(netem_change.format("delay "+str(timeout)+"ms 20ms"))
         
         # launch localhost client connecting to server
-        
+        sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        sock.bind((TestbTCPFramework.client_ip, TestbTCPFramework.client_port))
+
+        ch = ConnectionHandler(sock, winsize, timeout/1000.0)
+
+        # get file to send
+        fileName = "text.txt"
+
+        # create connection
+        streamID = random.randint(0, 2 ^ 32 - 1)
+        c = ClientConnection((TestbTCPFramework.server_ip, TestbTCPFramework.server_port), ch, streamID, winsize, timeout/1000.0, fileName)
+
         # client sends content to server
-        
+        ch.addConnection(c)
+        ch.serve()
+        sock.close()
+        print("whyy")
+
         # server receives content from client
-        
+        receivedData = TestbTCPFramework.server.getData(streamID)
+        sentData = bytes()
+        with open(fileName, 'rb') as f:
+            sentData = f.read()
+
         # content received by server matches the content sent by client
+        return self.assertEqual(sentData, receivedData)
     
     def test_allbad_network(self):
         """reliability over network with all of the above problems"""
@@ -190,12 +292,32 @@ class TestbTCPFramework(unittest.TestCase):
         run_command(netem_change.format("corrupt 1% duplicate 10% loss 10% 25% delay 20ms reorder 25% 50%"))
         
         # launch localhost client connecting to server
-        
+        sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        sock.bind((TestbTCPFramework.client_ip, TestbTCPFramework.client_port))
+
+        ch = ConnectionHandler(sock, winsize, timeout/1000.0)
+
+        # get file to send
+        fileName = "text.txt"
+
+        # create connection
+        streamID = random.randint(0, 2 ^ 32 - 1)
+        c = ClientConnection((TestbTCPFramework.server_ip, TestbTCPFramework.server_port), ch, streamID, winsize, timeout/1000.0, fileName)
+
         # client sends content to server
-        
+        ch.addConnection(c)
+        ch.serve()
+        sock.close()
+        print("whyy")
+
         # server receives content from client
-        
-        # content received by server matches the content sent by client   
+        receivedData = TestbTCPFramework.server.getData(streamID)
+        sentData = bytes()
+        with open(fileName, 'rb') as f:
+            sentData = f.read()
+
+        # content received by server matches the content sent by client
+        return self.assertEqual(sentData, receivedData)
 
   
 #    def test_command(self):

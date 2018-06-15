@@ -7,7 +7,7 @@ from flags import Flag, Flags
 
 class Connection(Thread):
 
-    def __init__(self, addr, handler, streamID, window, timeout):
+    def __init__(self, addr, handler, streamID, window, timeout, outFileName=None):
         super().__init__()
         self.addr = addr
         self.handler = handler
@@ -16,6 +16,9 @@ class Connection(Thread):
         self.streamID = streamID
         self.lock = RLock()
         self.allAcks = set()
+
+        self.outFileName = outFileName
+
 
         self.received = bytes()
 
@@ -33,8 +36,7 @@ class Connection(Thread):
         self.lastReceivedAck = 0
         self.close = False
         self.deltS = set()
-
-
+        self.closeTimer = None
 
     def run(self):
         while not self.done:
@@ -44,17 +46,17 @@ class Connection(Thread):
                 break
 
             self.allAcks.add(message.header.sNum)
-            
+
             print("------------------------")
             print(sorted(self.allAcks))
-            print("c ack", self.aNum) 
-            print("message", message) 
+            print("c ack", self.aNum)
+            print("message", message)
             print("Payload",message.payload[:message.header.dataLength])
-                      
+
             self.state = self.state.changeState(self, message)
             print(self.state)
             print("------------------------------------")
-            
+
         print("Connection is done")
         #self.handler.close_connection(self.streamID)
 
@@ -62,7 +64,7 @@ class Connection(Thread):
     def receive(self, message:Message):
         if message is None:
             self.buffer.put(None)
-        elif message.verify():        
+        elif message.verify():
             self.buffer.put(message)
 
 
@@ -73,7 +75,7 @@ class Connection(Thread):
             if not pureAck:
                 self.inFlight[message.header.sNum] = message
                 self.startTimer(message.header.sNum)
-            
+
 
     def startTimer(self, sNum):
         with self.lock:
@@ -89,7 +91,7 @@ class Connection(Thread):
             timer = self.timers.pop(sNum, None)
             print("stop timer", timer)
             if timer is not None:
-                timer.cancel()  
+                timer.cancel()
 
 
     def ackPackages(self, aNum):
@@ -127,22 +129,25 @@ class Connection(Thread):
                         self.send(m)
                         self.sNum += 1
                         return True
-
-
                     return False
-                payload = self.toSend.next(10)
+
+                payload = self.toSend.next(100)
                 h = Header(self.streamID, self.sNum, self.aNum, Flags([Flag.A]), self.window)
                 m = Message(h, payload)
                 self.send(m)
-                self.sNum += len(payload)                                
+                self.sNum += len(payload)
         elif ackIfNone:
             h = Header(self.streamID, self.sNum, self.aNum, Flags([Flag.A]), self.window)
             self.send(Message(h), True)
         return False
 
     def wrtData(self, suffix):
-        with open("rec" + suffix + ".jpg", 'wb') as f:
-            f.write(self.received)
+        if self.outFileName is not None:
+            with open(self.outFileName, 'wb') as f:
+                f.write(self.received)
+        else:
+            with open("rec" + suffix + ".jpg", 'wb') as f:
+                f.write(self.received)
 
     @property
     def sNum(self):
@@ -159,15 +164,25 @@ class Connection(Thread):
     def aNum(self, num):
         self._aNum = num % 65536
 
-
     def stopClient(self):
         self.handler.stop()
 
     def stopConnection(self, streamID):
         self.handler.close_connection(streamID)
 
+    def resetFinTimer(self):
+        if self.closeTimer is not None:
+            self.closeTimer.cancel()
+        self.closeTimer = Timer(self.timeout * 10, self.writeAndclose)
+        self.closeTimer.start()
 
-import state
-    
+
+    def writeAndclose(self):
+        print("Dying")
+        self.close = True
+        self.wrtData("Client")
+        self.stopClient()
+
+
 
     

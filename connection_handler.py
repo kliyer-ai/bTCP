@@ -8,7 +8,7 @@ from header import Header
 
 class ConnectionHandler():
 
-    def __init__(self, sock, window, timeout):
+    def __init__(self, sock, window, timeout, outFileName=None):
         self.connections = {}
         self.toSend = Queue()
         self.sock = sock
@@ -17,7 +17,9 @@ class ConnectionHandler():
 
         self.window = window
         self.timeout = timeout
-    
+        self.closed = False
+        self.outFileName = outFileName
+
     def serve(self):
         while not self.done:
             r, _, _ = select.select([self.sock], [], [], 0.1) #timeout in s
@@ -31,7 +33,7 @@ class ConnectionHandler():
                 if streamID in self.connections:
                     self.connections[streamID].receive(message)
                 else:
-                    c = ServerConnection(addr, self, streamID, self.window, self.timeout)
+                    c = ServerConnection(addr, self, streamID, self.window, self.timeout, self.outFileName)
                     c.receive(message)
                     self.connections[streamID] = c
                     c.start()
@@ -40,14 +42,16 @@ class ConnectionHandler():
                 while not self.toSend.empty():
                     bMessage, addr = self.toSend.get()
                     self.sock.sendto(bMessage, addr) # this has to be a tuple
-
         self.sock.close()
+        print("Done Serving!")
+        self.closed = True
         for c in self.connections.values():
             c.receive(None)
 
 
     def close_connection(self, streamID):
         with self.lock:
+            self.connections[streamID].receive(None)
             del self.connections[streamID]
 
     def stop(self):

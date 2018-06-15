@@ -5,7 +5,7 @@ from connection import Connection
 
 class State:
     @staticmethod
-    def changeState(connection, message): 
+    def changeState(connection, message):
         print("ERROR")
         pass
 
@@ -54,6 +54,8 @@ class Established(State):
             c.send(message)
             c.sNum +=1
             return Close_Wait
+        print("ISSUE!!!")
+        return Established
 
 class Syn_Sent(State):
     @staticmethod
@@ -65,6 +67,7 @@ class Syn_Sent(State):
 
             h = Header(c.streamID, c.sNum, c.aNum, Flags([Flag.A]), c.window)
             c.send(Message(h),True)
+            c.ackPackages(header.aNum)
             if c.sendData():
                 return Fin_Wait_1
             return Established
@@ -75,6 +78,7 @@ class Syn_Rcvd(State):
     @staticmethod
     def changeState(c,  message):
         if  message.header.flagSet(Flag.A):
+            c.ackPackages(message.header.aNum)
             return Established
         return Syn_Rcvd
 
@@ -92,8 +96,8 @@ class Close_Wait(State):
         if  message.header.flagSet(Flag.A):
             c.close = True
             c.wrtData("Server")
-
-            c.stopConnection(message.header.streamID)
+            c.ackPackages(message.header.aNum + 1)
+            #c.stopConnection(message.header.streamID)
 
             return Closed
         return Close_Wait
@@ -129,22 +133,21 @@ class Fin_Wait_1(State):
             h = Header(c.streamID, c.sNum, c.aNum, Flags([Flag.A]), c.window)
             m = Message(h)
             c.send(m, True)
-            c.close = True
-            c.wrtData("Client")
-
-            c.stopClient()
-
-            return Closed
+            c.resetFinTimer()
+            return Time_Wait
         return Fin_Wait_1
 
-class Closing(State):
-    @staticmethod
-    def changeState(connection,  message):
-        if  message.flagSet(Flag.A):
-            return Closed
 
 class Time_Wait(State):
+
     @staticmethod
-    def changeState(connection,  message):
-        connection.close()
+    def changeState(c,  message):
+        header = message.header
+        if header.flagSet(Flag.F):
+            c.ackPackages(message.header.aNum + 1)
+            h = Header(c.streamID, c.sNum, c.aNum, Flags([Flag.A]), c.window)
+            m = Message(h)
+            c.send(m, True)
+            c.resetFinTimer()
+            return Time_Wait
         return Closed

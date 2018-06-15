@@ -1,1 +1,131 @@
-aaaaaaabbbbbbbbbbbbbbcccccccccccccdddddddddddddddddeeeeeeeeeeeeeeeeeeeffffffffffffffffffggggggggggggggggghhhhhhhhhhhhhhhhhhhhhiiiiiiiiiiiiiiiijjjjjjjjjjjjjjjjjjkkkkkkkkkkkkkkkkkkkkllllllllllllllllllllmmmmmmmmmmmmmmmmmmmmmmmmmnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnoooooooooooooooooooooooopppppppppppppppppppqqqqqqqqqqqqqqqqqqqqrrrrrrrrrrrrrrrrrrrrrrrrrrrssssssssssssssssssssssssuuuuuuuuuuuuuuuuuuuuuuuuuuuuvvvvvvvvvvvvvvvvvvvvvvwwwwwwwwwwwwwwwwwwwxxxxxxxxxxxxxxyyyyyyyyyyyyyyyzzzzzzzzzz
+        # launch localhost client connecting to server
+        sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM) 
+        sock.bind((TestbTCPFramework.client_ip, TestbTCPFramework.client_port))
+
+        ch = ConnectionHandler(sock, 8, 1)
+
+        # get file to send
+        fileName = "text.txt"
+        
+        # create connection
+        streamID = random.randint(0, 2^32-1)
+        c = ClientConnection((TestbTCPFramework.server_ip, TestbTCPFramework.server_port), ch, streamID, 8, 1, fileName)
+        
+        # client sends content to server
+        ch.addConnection(c)
+        ch.serve()
+        sock.close()
+        print("whyy")
+        
+        # server receives content from client
+        receivedData = TestbTCPFramework.server.getData(streamID)
+        sentData = bytes()
+        with open(fileName, 'rb') as f:
+            sentData = f.read()
+
+        # content received by server matches the content sent by client
+        return self.assertEqual(sentData, receivedData)        # launch localhost client connecting to server
+        sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        sock.bind((TestbTCPFramework.client_ip, TestbTCPFramework.client_port))
+
+        ch = ConnectionHandler(sock, 8, 1)
+
+        # get file to send
+        fileName = "text.txt"
+
+        # create connection
+        streamID = random.randint(0, 2^32-1)
+        c = ClientConnection((TestbTCPFramework.server_ip, TestbTCPFramework.server_port), ch, streamID, 8, 1, fileName)
+
+        # client sends content to server
+        ch.addConnection(c)
+        ch.serve()
+        sock.close()
+        print("whyy")
+
+        # server receives content from client
+        receivedData = TestbTCPFramework.server.getData(streamID)
+        sentData = bytes()
+        with open(fileName, 'rb') as f:
+            sentData = f.read()
+
+        # content received by server matches the content sent by client
+        return self.assertEqual(sentData, receivedData)        # launch localhost client connecting to server
+        sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        sock.bind((TestbTCPFramework.client_ip, TestbTCPFramework.client_port))
+
+        ch = ConnectionHandler(sock, 8, 1)
+
+        # get file to send
+        fileName = "text.txt"
+
+        # create connection
+        streamID = random.randint(0, 2^32-1)
+        c = ClientConnection((TestbTCPFramework.server_ip, TestbTCPFramework.server_port), ch, streamID, 8, 1, fileName)
+
+        # client sends content to server
+        ch.addConnection(c)
+        ch.serve()
+        sock.close()
+        print("whyy")
+
+        # server receives content from client
+        receivedData = TestbTCPFramework.server.getData(streamID)
+        sentData = bytes()
+        with open(fileName, 'rb') as f:
+            sentData = f.read()
+
+        # content received by server matches the content sent by client
+        return self.assertEqual(sentData, receivedData)        # launch localhost client connecting to server
+        sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        sock.bind((TestbTCPFramework.client_ip, TestbTCPFramework.client_port))
+
+        ch = ConnectionHandler(sock, 8, 1)
+
+        # get file to send
+        fileName = "text.txt"
+
+        # create connection
+        streamID = random.randint(0, 2^32-1)
+        c = ClientConnection((TestbTCPFramework.server_ip, TestbTCPFramework.server_port), ch, streamID, 8, 1, fileName)
+
+        # client sends content to server
+        ch.addConnection(c)
+        ch.serve()
+        sock.close()
+        print("whyy")
+
+        # server receives content from client
+        receivedData = TestbTCPFramework.server.getData(streamID)
+        sentData = bytes()
+        with open(fileName, 'rb') as f:
+            sentData = f.read()
+
+        # content received by server matches the content sent by client
+        return self.assertEqual(sentData, receivedData)        # launch localhost client connecting to server
+        sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        sock.bind((TestbTCPFramework.client_ip, TestbTCPFramework.client_port))
+
+        ch = ConnectionHandler(sock, 8, 1)
+
+        # get file to send
+        fileName = "text.txt"
+
+        # create connection
+        streamID = random.randint(0, 2^32-1)
+        c = ClientConnection((TestbTCPFramework.server_ip, TestbTCPFramework.server_port), ch, streamID, 8, 1, fileName)
+
+        # client sends content to server
+        ch.addConnection(c)
+        ch.serve()
+        sock.close()
+        print("whyy")
+
+        # server receives content from client
+        receivedData = TestbTCPFramework.server.getData(streamID)
+        sentData = bytes()
+        with open(fileName, 'rb') as f:
+            sentData = f.read()
+
+        # content received by server matches the content sent by client
+        return self.assertEqual(sentData, receivedData)

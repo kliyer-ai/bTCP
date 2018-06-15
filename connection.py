@@ -46,19 +46,8 @@ class Connection(Thread):
                 break
 
             self.allAcks.add(message.header.sNum)
-
-            print("------------------------")
-            print(sorted(self.allAcks))
-            print("c ack", self.aNum)
-            print("message", message)
-            print("Payload",message.payload[:message.header.dataLength])
-
             self.state = self.state.changeState(self, message)
-            print(self.state)
-            print("------------------------------------")
 
-        print("Connection is done")
-        #self.handler.close_connection(self.streamID)
 
 
     def receive(self, message:Message):
@@ -83,13 +72,11 @@ class Connection(Thread):
             self.stopTimer(sNum)
             self.timers[sNum] = timer
             timer.start()
-            #print("started timer", timer)
 
 
     def stopTimer(self, sNum):
         with self.lock:
             timer = self.timers.pop(sNum, None)
-            print("stop timer", timer)
             if timer is not None:
                 timer.cancel()
 
@@ -97,16 +84,13 @@ class Connection(Thread):
     def ackPackages(self, aNum):
         with self.lock:
             received = [k for k in self.inFlight.keys() if k < aNum]
-            print(self.timers)
             for k in received:
                 self.stopTimer(k)
                 del self.inFlight[k]
                 self.deltS.add(k)
-            print("inF:: " + str(self.inFlight))
 
 
     def timerResend(self, sNum):
-        #print("timersNow:", self.timers)
         with self.lock:
             self.send(self.inFlight[sNum])
 
@@ -117,13 +101,10 @@ class Connection(Thread):
                 self.send(m)
 
     def sendData(self, ackIfNone = False):
-        print("sending!!")
         if self.toSend is not None:
-            print(self.window - len(self.inFlight))
             for _ in range(self.window - len(self.inFlight)):
                 if self.toSend.empty():
                     if len(self.inFlight) == 0:
-                        print("done")
                         h = Header(self.streamID, self.sNum, self.aNum, Flags([Flag.F]), self.window)
                         m = Message(h)
                         self.send(m)
@@ -178,7 +159,6 @@ class Connection(Thread):
 
 
     def writeAndclose(self):
-        print("Dying")
         self.close = True
         self.wrtData("Client")
         self.stopClient()

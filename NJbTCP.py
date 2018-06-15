@@ -11,7 +11,12 @@ def startServer(ip, port):
     sock.bind((ip, port))
 
     ch = ConnectionHandler(sock, 100, 1, fileName)
-    ch.serve()
+    try:
+        ch.serve()
+    except KeyboardInterrupt:
+        ch.endAllConnections()
+        print("Server stopped")
+
 
 def startClient(ip, port):
     fileName = input("Enter filename: ")

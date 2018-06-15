@@ -30,7 +30,6 @@ class Established(State):
 
 
                     if c.duplicateAcks > 2:
-                        print("Dup Ack")
                         c.resendInFlight()
                         if c.sendData():
                             return Fin_Wait_1
@@ -43,7 +42,6 @@ class Established(State):
                         return Fin_Wait_1
             else:
                 #duplicate Ack back - package did not fit
-                print("OUT OF SEQ")
                 h = Header(c.streamID, c.sNum, c.aNum, Flags([Flag.A]), c.window)
                 c.send(Message(h), True)
             return Established
@@ -54,7 +52,6 @@ class Established(State):
             c.send(message)
             c.sNum +=1
             return Close_Wait
-        print("ISSUE!!!")
         return Established
 
 class Syn_Sent(State):
@@ -97,7 +94,6 @@ class Close_Wait(State):
             c.close = True
             c.wrtData("Server")
             c.ackPackages(message.header.aNum + 1)
-            #c.stopConnection(message.header.streamID)
 
             return Closed
         return Close_Wait

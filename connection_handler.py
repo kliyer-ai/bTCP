@@ -3,7 +3,6 @@ from message import Message
 from server_connection import ServerConnection
 from threading import Lock
 import select
-from header import Header
 
 
 class ConnectionHandler():
@@ -28,7 +27,6 @@ class ConnectionHandler():
                 data, addr = s.recvfrom(1016)
                 message = Message.from_bytes(data)
                 streamID = message.header.streamID
-                print("receive", message, streamID)
 
                 if streamID in self.connections:
                     self.connections[streamID].receive(message)
@@ -43,8 +41,11 @@ class ConnectionHandler():
                     bMessage, addr = self.toSend.get()
                     self.sock.sendto(bMessage, addr) # this has to be a tuple
         self.sock.close()
-        print("Done Serving!")
         self.closed = True
+        self.endAllConnections()
+
+
+    def endAllConnections(self):
         for c in self.connections.values():
             c.receive(None)
 
@@ -59,7 +60,6 @@ class ConnectionHandler():
             self.done = True
 
     def send(self, message, addr):
-        print("send", addr, message)
         self.toSend.put((message.to_bytes(), addr))
 
     def addConnection(self, c):

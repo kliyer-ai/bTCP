@@ -15,6 +15,7 @@ class Connection(Thread):
         self.done = False
         self.streamID = streamID
         self.lock = RLock()
+        self.allAcks = set()
 
         self.received = bytes()
 
@@ -31,48 +32,56 @@ class Connection(Thread):
         self.duplicateAcks = 0
         self.lastReceivedAck = 0
         self.close = False
+        self.deltS = set()
 
 
 
     def run(self):
         while not self.done:
-            message = self.buffer.get()            
+            message = self.buffer.get()
+
+            if message is None:
+                break
+
+            self.allAcks.add(message.header.sNum)
+            
+            print("------------------------")
+            print(sorted(self.allAcks))
+            print("c ack", self.aNum) 
+            print("message", message) 
+            print("Payload",message.payload[:message.header.dataLength])
+                      
             self.state = self.state.changeState(self, message)
             print(self.state)
+            print("------------------------------------")
             
-        self.handler.close_connection(self.streamID)
+        print("Connection is done")
+        #self.handler.close_connection(self.streamID)
 
 
     def receive(self, message:Message):
-        print("verifying message...")
-        if message.verify():
-            print("verified")
-            self.ackPackages(message.header.aNum)
-
-            print("Payload",message.payload[:message.header.dataLength])
-
-            #self.aNum = message.header.sNum + message.header.dataLength
-            #print("past akk")
-
+        if message is None:
+            self.buffer.put(None)
+        elif message.verify():        
             self.buffer.put(message)
-        else:
-            print("rejected")
+
 
 
     def send(self, message, pureAck = False):
         self.handler.send(message, self.addr)
         with self.lock:
             if not pureAck:
-                self.inFlight[self.sNum] = message
-                self.startTimer(self.sNum)
+                self.inFlight[message.header.sNum] = message
+                self.startTimer(message.header.sNum)
             
 
     def startTimer(self, sNum):
-        timer = Timer(self.timeout, self.timerResend, [sNum])
-        self.stopTimer(sNum)
-        self.timers[sNum] = timer
-        timer.start()
-        #print("started timer", timer)
+        with self.lock:
+            timer = Timer(self.timeout, self.timerResend, [sNum])
+            self.stopTimer(sNum)
+            self.timers[sNum] = timer
+            timer.start()
+            #print("started timer", timer)
 
 
     def stopTimer(self, sNum):
@@ -85,11 +94,12 @@ class Connection(Thread):
 
     def ackPackages(self, aNum):
         with self.lock:
-            received = [k for k in self.inFlight.keys() if k <= aNum]
+            received = [k for k in self.inFlight.keys() if k < aNum]
             print(self.timers)
             for k in received:
                 self.stopTimer(k)
                 del self.inFlight[k]
+                self.deltS.add(k)
             print("inF:: " + str(self.inFlight))
 
 
@@ -99,35 +109,40 @@ class Connection(Thread):
             self.send(self.inFlight[sNum])
 
     def resendInFlight(self):
-        for sNum, m in self.inFlight.items():
-            self.stopTimer(sNum)
-            self.send(m)
+        with self.lock:
+            for sNum, m in self.inFlight.items():
+                self.stopTimer(sNum)
+                self.send(m)
 
     def sendData(self, ackIfNone = False):
         print("sending!!")
-        if self.toSend is not None and not self.toSend.empty():
+        if self.toSend is not None:
             print(self.window - len(self.inFlight))
             for _ in range(self.window - len(self.inFlight)):
                 if self.toSend.empty():
-                    print("done")
-                    h = Header(self.streamID, self.sNum, self.aNum, Flags([Flag.F]), self.window)
-                    m = Message(h)
-                    self.send(m)
-                    self.sNum +=1
-                    return True
-                payload = self.toSend.next(100)
+                    if len(self.inFlight) == 0:
+                        print("done")
+                        h = Header(self.streamID, self.sNum, self.aNum, Flags([Flag.F]), self.window)
+                        m = Message(h)
+                        self.send(m)
+                        self.sNum += 1
+                        return True
+
+
+                    return False
+                payload = self.toSend.next(10)
                 h = Header(self.streamID, self.sNum, self.aNum, Flags([Flag.A]), self.window)
-                self.sNum += len(payload)
                 m = Message(h, payload)
-                m.to_bytes()
-                print(m.verify())
                 self.send(m)
+                self.sNum += len(payload)                                
         elif ackIfNone:
             h = Header(self.streamID, self.sNum, self.aNum, Flags([Flag.A]), self.window)
             self.send(Message(h), True)
         return False
+
+
     def wrtData(self, suffix):
-        with open("rec" + suffix+".jpg", 'wb') as f:
+        with open("rec" + suffix + ".jpg", 'wb') as f:
             f.write(self.received)
 
     @property
@@ -144,6 +159,15 @@ class Connection(Thread):
     @aNum.setter
     def aNum(self, num):
         self._aNum = num % 65536
+
+
+    def stopClient(self):
+        self.handler.stop()
+
+    def stopConnection(self, streamID):
+        self.handler.close_connection(streamID)
+
+
 import state
     
 

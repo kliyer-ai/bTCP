@@ -2,6 +2,10 @@ import unittest
 import socket
 import time
 import sys
+from connection_handler import ConnectionHandler
+from client_connection import ClientConnection
+import threading
+import random
 
 timeout=100
 winsize=100
@@ -46,6 +50,13 @@ def run_command(command,cwd=None, shell=True):
         
 class TestbTCPFramework(unittest.TestCase):
     """Test cases for bTCP"""
+
+    server = None
+
+    server_ip = "127.0.0.1"
+    server_port = 9001
+    client_ip = "127.0.0.1"
+    client_port = 9002
     
     def setUp(self):
         """Prepare for testing"""
@@ -53,7 +64,15 @@ class TestbTCPFramework(unittest.TestCase):
         run_command(netem_add)
         
         # launch localhost server
-        
+        sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM) 
+        sock.bind((TestbTCPFramework.server_ip, TestbTCPFramework.server_port))
+
+        ch = ConnectionHandler(sock, 8, 1)
+        TestbTCPFramework.server = ch
+
+        t = threading.Thread(target=ch.serve)
+        t.start()
+
 
     def tearDown(self):
         """Clean up after testing"""
@@ -61,18 +80,41 @@ class TestbTCPFramework(unittest.TestCase):
         run_command(netem_del)
         
         # close server
+        TestbTCPFramework.server.stop()
+        #TestbTCPFramework.server.sock.close()
+
 
     def test_ideal_network(self):
         """reliability over an ideal framework"""
         # setup environment (nothing to set)
 
         # launch localhost client connecting to server
+        sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM) 
+        sock.bind((TestbTCPFramework.client_ip, TestbTCPFramework.client_port))
+
+        ch = ConnectionHandler(sock, 8, 1)
+
+        # get file to send
+        fileName = "text.txt"
+        
+        # create connection
+        streamID = random.randint(0, 2^32-1)
+        c = ClientConnection((TestbTCPFramework.server_ip, TestbTCPFramework.server_port), ch, streamID, 8, 1, fileName)
         
         # client sends content to server
+        ch.addConnection(c)
+        ch.serve()
+        sock.close()
+        print("whyy")
         
         # server receives content from client
-        
+        receivedData = TestbTCPFramework.server.getData(streamID)
+        sentData = bytes()
+        with open(fileName, 'wb') as f:
+            sentData = f.read()
+
         # content received by server matches the content sent by client
+        return self.assertEqual(sentData, receivedData)
     
     def test_flipping_network(self):
         """reliability over network with bit flips 
@@ -169,6 +211,7 @@ if __name__ == "__main__":
     parser.add_argument("-w", "--window", help="Define bTCP window size used", type=int, default=100)
     parser.add_argument("-t", "--timeout", help="Define the timeout value used (ms)", type=int, default=timeout)
     args, extra = parser.parse_known_args()
+
     timeout = args.timeout
     winsize = args.window
     

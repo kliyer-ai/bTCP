@@ -51,7 +51,7 @@ class Connection(Thread):
             print("Payload",message.payload[:message.header.dataLength])
 
             #self.aNum = message.header.sNum + message.header.dataLength
-            print("past akk")
+            #print("past akk")
 
             self.buffer.put(message)
         else:
@@ -72,7 +72,7 @@ class Connection(Thread):
         self.stopTimer(sNum)
         self.timers[sNum] = timer
         timer.start()
-        print("started timer", timer)
+        #print("started timer", timer)
 
 
     def stopTimer(self, sNum):
@@ -94,7 +94,7 @@ class Connection(Thread):
 
 
     def timerResend(self, sNum):
-        print("timersNow:", self.timers)
+        #print("timersNow:", self.timers)
         with self.lock:
             self.send(self.inFlight[sNum])
 
@@ -103,7 +103,7 @@ class Connection(Thread):
             self.stopTimer(sNum)
             self.send(m)
 
-    def sendData(self):
+    def sendData(self, ackIfNone = False):
          if self.toSend is not None and not self.toSend.empty():
                 print(self.window - len(self.inFlight))
                 for _ in range(self.window - len(self.inFlight)):
@@ -119,10 +119,11 @@ class Connection(Thread):
                     m.to_bytes()
                     print(m.verify())
                     self.send(m)
-        else:
-                h = Header(c.streamID, c.sNum, c.aNum, Flags([Flag.A]), c.window)
-                c.send(Message(h))
-                
+         elif ackIfNone:
+             h = Header(self.streamID, self.sNum, self.aNum, Flags([Flag.A]), self.window)
+             self.send(Message(h))
+
+
 import state
     
 

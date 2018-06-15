@@ -15,33 +15,29 @@ class Established(State):
         header = message.header
 
         if  header.flagSet(Flag.A):
-
             if header.sNum == c.aNum:
-                c.received += message.payload[:header.dataLength]
-                c.aNum = message.header.sNum + message.header.dataLength
-
-            if header.dataLength == 0:
-                if(c.lastReceivedAck == header.aNum):
-                    c.duplicateAck += 1
-                else:
-                    c.lastReceivedAck = header.aNum
-                    c.duplicateAck = 0
-                
-                if c.duplicateAck > 2:
-                    c.resendInFlight()
-                    return Established
-                else:
-                    if c.toSend is not None and not c.toSend.empty():
-                        c.sendData()
+                #if it fits
+                if header.dataLength == 0:
+                    if (c.lastReceivedAck == header.aNum):
+                        c.duplicateAck += 1
                     else:
-                        h = Header(c.streamID, c.sNum, c.aNum, Flags([Flag.A]), c.window)
-                        c.send(Message(h))
+                        c.lastReceivedAck = header.aNum
+                        c.duplicateAck = 0
 
-            
-                c.sendData()
-
-
-            
+                    if c.duplicateAck > 2:
+                        c.resendInFlight()
+                        return Established
+                    elif c.duplicateAck == 0:
+                        c.sendData()
+                else:
+                    #add data
+                    c.received += message.payload[:header.dataLength]
+                    c.aNum = message.header.sNum + message.header.dataLength  # update num
+                    c.sendData(True)
+            else:
+                #duplicate Ack back - package did not fit
+                h = Header(c.streamID, c.sNum, c.aNum, Flags([Flag.A]), c.window)
+                c.send(Message(h))
             return Established
 
         if header.flagSet(Flag.F):

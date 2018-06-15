@@ -3,7 +3,6 @@ import socket, argparse
 from message import Message
 from connection import Connection
 from queue import Queue
-import socketWrapper
 from connection_handler import ConnectionHandler
 
 #Handle arguments

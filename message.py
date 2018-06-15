@@ -45,4 +45,7 @@ class Message():
         bHeader = header.to_bytes()
         return checksum == binascii.crc32(bHeader + self.payload)
 
+    def __str__(self):
+        return "Message" + 
+
 
